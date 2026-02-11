@@ -144,6 +144,7 @@ function analyzeImages($: cheerio.CheerioAPI) {
     let withoutSrcset = 0;
     let modernFormats = 0;
     let legacyFormats = 0;
+    let altTextMissing = 0; // Phase 6
 
     imgs.each((_, el) => {
         const $img = $(el);
@@ -168,6 +169,12 @@ function analyzeImages($: cheerio.CheerioAPI) {
         } else if (src.match(/\.(jpg|jpeg|png|gif)$/i)) {
             legacyFormats++;
         }
+
+        // Check for alt text (Phase 6)
+        const alt = $img.attr('alt');
+        if (!alt || alt.trim().length === 0) {
+            altTextMissing++;
+        }
     });
 
     return {
@@ -176,6 +183,7 @@ function analyzeImages($: cheerio.CheerioAPI) {
         withoutSrcset,
         modernFormats,
         legacyFormats,
+        altTextMissing, // Phase 6
         cached: 0, // Would need to fetch each image to check headers
         uncached: 0,
     };
@@ -258,11 +266,70 @@ function analyzeStyles($: cheerio.CheerioAPI) {
 // 15-17. SEO Analysis
 function analyzeSEO($: cheerio.CheerioAPI): SEOEvidence {
     const keywords = analyzeKeywords($);
+    const links = analyzeLinks($);
+    const headerStructure = analyzeHeaderStructure($);
 
     return {
         keywords,
         custom404: false, // Would need to test /404 endpoint separately
         sslErrors: [], // Would need SSL certificate validation
+        links, // Phase 6
+        headerStructure, // Phase 6
+    };
+}
+
+// Phase 6: Link Analysis
+function analyzeLinks($: cheerio.CheerioAPI) {
+    let internal = 0;
+    let external = 0;
+
+    $('a[href]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+
+        if (href.startsWith('/') || href.startsWith('#') || href.includes('localhost') || !href.startsWith('http')) {
+            internal++;
+        } else {
+            external++;
+        }
+    });
+
+    return {
+        internal,
+        external,
+        broken: 0, // Would need fetch to verify
+    };
+}
+
+// Phase 6: Header Hierarchy Analysis
+function analyzeHeaderStructure($: cheerio.CheerioAPI) {
+    const issues: string[] = [];
+    const headers = $('h1, h2, h3, h4, h5, h6');
+    let lastLevel = 0;
+
+    // Check for multiple H1s (often discouraged but valid in HTML5, Semrush flags it)
+    if ($('h1').length > 1) {
+        issues.push('Multiple H1 tags found');
+    }
+
+    if ($('h1').length === 0) {
+        issues.push('Missing H1 tag');
+    }
+
+    headers.each((_, el) => {
+        const level = parseInt(el.tagName.substring(1));
+
+        // Skip if first header is not H1 (already covered by missing H1 check logic partially)
+        // Checks for skipping levels (e.g. H2 -> H4)
+        if (lastLevel > 0 && level > lastLevel + 1) {
+            issues.push(`Skipped heading level: H${lastLevel} -> H${level}`);
+        }
+
+        lastLevel = level;
+    });
+
+    return {
+        valid: issues.length === 0,
+        issues: issues.slice(0, 5), // Top 5 issues
     };
 }
 

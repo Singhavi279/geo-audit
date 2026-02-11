@@ -53,13 +53,15 @@ export interface PSIResult {
 export async function runPageSpeedInsights(
     url: string,
     strategy: 'mobile' | 'desktop' = 'mobile'
-): Promise<PSIResult | null> {
+): Promise<PSIResult | { error: string } | null> {
     const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
 
     if (!apiKey) {
-        console.warn('[PSI] API key not found - skipping PSI');
-        return null;
+        console.warn('[PSI] API key not found in environment variables (GOOGLE_PAGESPEED_API_KEY). Skipping PSI.');
+        return { error: 'Missing API Key (GOOGLE_PAGESPEED_API_KEY)' };
     }
+
+    console.log('[PSI] Using API Key:', apiKey.substring(0, 5) + '...');
 
     try {
         const apiUrl = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed');
@@ -91,7 +93,18 @@ export async function runPageSpeedInsights(
             console.error(`[PSI] API error: ${response.status} ${response.statusText}`);
             const errorText = await response.text();
             console.error('[PSI] Error details:', errorText);
-            return null;
+
+            // Try to extract a friendly error message from the Google API error response
+            let friendlyError = `API Error ${response.status}`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.error?.message) {
+                    friendlyError = errorJson.error.message;
+                }
+            } catch (e) {
+                // Ignore parsing error
+            }
+            return { error: friendlyError };
         }
 
         const data = await response.json();
@@ -251,6 +264,6 @@ export async function runPageSpeedInsights(
 
     } catch (error) {
         console.error('[PSI] Failed to run PageSpeed Insights:', error);
-        return null;
+        return { error: error instanceof Error ? error.message : 'Unknown PSI Error' };
     }
 }

@@ -42,6 +42,7 @@ export interface Finding {
 export interface Evidence {
   onPage: OnPageEvidence;
   performance?: PerformanceEvidence;
+  performanceError?: string;
   schema: SchemaEvidence;
   citation: CitationEvidence;
   resources?: ResourceEvidence;
@@ -204,6 +205,7 @@ export interface ResourceEvidence {
     legacyFormats: number;
     cached: number;
     uncached: number;
+    altTextMissing: number; // Phase 6
   };
   scripts?: {
     total: number;
@@ -230,6 +232,15 @@ export interface SEOEvidence {
   };
   custom404?: boolean;
   sslErrors?: string[];
+  links?: { // Phase 6
+    internal: number;
+    external: number;
+    broken: number;
+  };
+  headerStructure?: { // Phase 6
+    valid: boolean;
+    issues: string[];
+  };
 }
 
 // Browser-based evidence (optional, requires Playwright)

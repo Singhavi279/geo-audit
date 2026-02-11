@@ -16,10 +16,12 @@ import { calculateScores } from '../scoring';
 import { generateRecommendations } from './recommendations';
 
 /**
- * Run complete audit pipeline
+ * Run fast audit checks (HTML, SEO, Schema, Gates)
+ * Returns full result with performance/browser as undefined
  */
-export async function runAudit(input: AuditInput): Promise<AuditResult> {
+export async function runFastAudit(input: AuditInput): Promise<AuditResult> {
     const startTime = Date.now();
+    console.log('[AUDIT] Starting FAST audit for:', input.url);
 
     try {
         // Step A: Normalize URL
@@ -55,52 +57,25 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
             robots_allowed: robotsResult.allowed,
         };
 
-        // Check if we should skip expensive checks
-        const shouldSkipExpensive = !gates.fetchable || !gates.indexable;
-
         // Step F: Schema extraction (cheap, always run)
         const schemaEvidence = extractSchema(fetchResult.html);
 
         // Step I: Citation readiness (cheap, always run)
         const citationEvidence = analyzeCitationReadiness(fetchResult.html, onPage);
 
-        // Step G-H: Performance APIs + Browser checks (expensive, conditionally skip)
-        let psiResult = null;
-        let cruxResult = null;
-        let browserResult = null;
-
-        if (!shouldSkipExpensive) {
-            // Run PSI, CrUX, and Browser checks in parallel
-            [psiResult, cruxResult, browserResult] = await Promise.all([
-                runPageSpeedInsights(fetchResult.finalUrl, 'mobile'),
-                getCrUXData(fetchResult.finalUrl),
-                runBrowserChecks(fetchResult.finalUrl),
-            ]);
-        }
-
-        // Build evidence object
+        // Build evidence object (Performance/Browser missing)
         const evidence = {
             onPage,
-            performance: psiResult ? {
-                lighthouse: psiResult.lighthouse,
-                metrics: psiResult.metrics,
-                opportunities: psiResult.opportunities,
-                crux: cruxResult || undefined,
-            } : undefined,
+            performance: undefined,
+            performanceError: undefined,
             schema: schemaEvidence,
             citation: citationEvidence,
             resources: advancedChecks.resources,
             seo: advancedChecks.seo,
-            browser: browserResult ? {
-                consoleErrors: browserResult.consoleErrors,
-                jsErrors: browserResult.jsErrors,
-                renderTime: browserResult.renderTime,
-                resources: browserResult.resources,
-                screenshot: browserResult.screenshot,
-            } : undefined,
+            browser: undefined,
         };
 
-        // Calculate scores
+        // Calculate scores (Performance will be 0)
         const scores = calculateScores(gates, evidence);
 
         // Step J: Generate recommendations
@@ -112,13 +87,6 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
         findings.push({ category: 'on-page', type: 'meta_description', value: onPage.metaDescription });
         findings.push({ category: 'on-page', type: 'canonical', value: onPage.canonical });
         findings.push({ category: 'on-page', type: 'h1_count', value: onPage.h1.length });
-
-        if (psiResult?.metrics?.lcp) {
-            findings.push({ category: 'performance', type: 'lcp', value: psiResult.metrics.lcp });
-        }
-        if (psiResult?.metrics?.cls !== undefined) {
-            findings.push({ category: 'performance', type: 'cls', value: psiResult.metrics.cls });
-        }
 
         // Step E: Sitemap analysis (optional, run if provided or auto-discover)
         let sitemapSummary = undefined;
@@ -139,10 +107,9 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
         }
 
         const elapsedTime = Date.now() - startTime;
-        console.log(`Audit completed in ${elapsedTime}ms`);
+        console.log(`[AUDIT] Fast audit completed in ${elapsedTime}ms`);
 
-        // Return result
-        const result: AuditResult = {
+        return {
             input,
             scores,
             gates,
@@ -150,16 +117,116 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
             evidence,
             recommendations,
             sitemap: sitemapSummary,
-            raw: {
-                psi: psiResult,
-                crux: cruxResult,
-            },
+            raw: { psi: null, crux: null },
         };
 
-        return result;
-
     } catch (error) {
-        console.error('Audit pipeline failed:', error);
+        console.error('Fast audit failed:', error);
         throw error;
     }
+}
+
+/**
+ * Run expensive audit checks (PSI, CrUX, Browser) in parallel
+ * Returns partial evidence to merge
+ */
+export async function runExpensiveAudit(input: AuditInput): Promise<{
+    performance: any;
+    performanceError?: string;
+    browser: any;
+    crux: any;
+}> {
+    const startTime = Date.now();
+    console.log('[AUDIT] Starting EXPENSIVE audit for:', input.url);
+
+    try {
+        const { normalized } = normalizeUrl(input.url);
+
+        // PSI handles its own fetching, Browser handles its own.
+        // We just need to trigger them.
+
+        // Isolate expensive checks so one slow check doesn't kill the others
+        // PSI: 45s timeout (critical)
+        // Browser: 10s timeout (fail fast)
+        // CrUX: 10s timeout
+
+        const psiPromise = Promise.race([
+            runPageSpeedInsights(normalized, 'mobile'),
+            new Promise(resolve => setTimeout(() => resolve({ error: 'PSI Timed Out (45s)' }), 45000))
+        ]);
+
+        const browserPromise = Promise.race([
+            runBrowserChecks(normalized),
+            new Promise(resolve => setTimeout(() => resolve(null), 10000)) // Silent fail for browser after 10s
+        ]);
+
+        const cruxPromise = Promise.race([
+            getCrUXData(normalized),
+            new Promise(resolve => setTimeout(() => resolve(null), 10000))
+        ]);
+
+        // Run all in parallel
+        const [psiResult, browserResult, cruxResult] = await Promise.all([
+            psiPromise,
+            browserPromise,
+            cruxPromise
+        ]) as [any, any, any];
+
+        const elapsedTime = Date.now() - startTime;
+        console.log(`[AUDIT] Expensive audit completed in ${elapsedTime}ms`);
+
+
+        return {
+            performance: (psiResult && !('error' in psiResult)) ? {
+                lighthouse: (psiResult as any).lighthouse,
+                metrics: (psiResult as any).metrics,
+                opportunities: (psiResult as any).opportunities,
+                crux: cruxResult || undefined,
+            } : undefined,
+            performanceError: (psiResult && 'error' in psiResult) ? (psiResult as any).error : undefined,
+            browser: browserResult ? {
+                consoleErrors: browserResult.consoleErrors,
+                jsErrors: browserResult.jsErrors,
+                renderTime: browserResult.renderTime,
+                resources: browserResult.resources,
+                screenshot: browserResult.screenshot,
+            } : undefined,
+            crux: cruxResult,
+        };
+
+    } catch (error) {
+        console.error('Expensive audit failed:', error);
+        throw error;
+    }
+}
+
+/**
+ * Legacy wrapper for backward compatibility or serverside full runs
+ */
+export async function runAudit(input: AuditInput): Promise<AuditResult> {
+    // Run fast first
+    const fastResult = await runFastAudit(input);
+
+    // Then expensive
+    const expensiveResult = await runExpensiveAudit(input);
+
+    // Merge
+    fastResult.evidence.performance = expensiveResult.performance;
+    fastResult.evidence.performanceError = expensiveResult.performanceError;
+    fastResult.evidence.browser = expensiveResult.browser;
+    fastResult.raw = { psi: expensiveResult.performance, crux: expensiveResult.crux };
+
+    // Recalculate scores with new evidence
+    fastResult.scores = calculateScores(fastResult.gates, fastResult.evidence);
+
+    // Regenerate findings/recommendations if needed (skipped for now as they mostly depend on fast data + PSI metrics)
+    // Actually, PSI metrics add findings, so we should add them.
+    if (expensiveResult.performance?.metrics?.lcp) {
+        fastResult.findings.push({ category: 'performance', type: 'lcp', value: expensiveResult.performance.metrics.lcp });
+    }
+    if (expensiveResult.performance?.metrics?.cls !== undefined) {
+        fastResult.findings.push({ category: 'performance', type: 'cls', value: expensiveResult.performance.metrics.cls });
+    }
+
+    return fastResult;
 }

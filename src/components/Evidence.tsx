@@ -50,18 +50,69 @@ export default function Evidence({ evidence }: EvidenceProps) {
                                 {evidence.onPage.canonical || '—'}
                             </p>
                         </div>
-                        <div className="flex gap-8">
-                            <div>
-                                <label className="text-xs font-semibold text-text-tertiary uppercase">H1 Count</label>
-                                <p className="text-2xl font-semibold text-text-primary mt-1">{evidence.onPage.h1.length}</p>
+
+                        {/* Phase 6: Header Hierarchy */}
+                        <div className="col-span-full border-t border-white/20 pt-6 mt-2">
+                            <div className="flex items-center justify-between mb-4">
+                                <label className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">Content Structure</label>
+                                {evidence.seo?.headerStructure && (
+                                    <span className={`px-2 py-0.5 text-xs font-bold rounded uppercase ${evidence.seo.headerStructure.valid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {evidence.seo.headerStructure.valid ? 'Valid Hierarchy' : 'Issues Found'}
+                                    </span>
+                                )}
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-text-tertiary uppercase">Total H2s</label>
-                                <p className="text-2xl font-semibold text-text-primary mt-1">{evidence.onPage.h2Count}</p>
+
+                            <div className="flex gap-8 mb-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-text-tertiary uppercase">H1 Count</label>
+                                    <p className="text-2xl font-semibold text-text-primary mt-1">{evidence.onPage.h1.length}</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-text-tertiary uppercase">Total H2s</label>
+                                    <p className="text-2xl font-semibold text-text-primary mt-1">{evidence.onPage.h2Count}</p>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-text-tertiary uppercase">Total H3s</label>
+                                    <p className="text-2xl font-semibold text-text-primary mt-1">{evidence.onPage.h3Count}</p>
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-text-tertiary uppercase">Total H3s</label>
-                                <p className="text-2xl font-semibold text-text-primary mt-1">{evidence.onPage.h3Count}</p>
+
+                            {evidence.seo?.headerStructure?.issues?.length ? (
+                                <ul className="space-y-1 bg-amber-50/50 p-3 rounded-lg">
+                                    {evidence.seo.headerStructure.issues.map((issue, i) => (
+                                        <li key={i} className="text-xs text-amber-800 flex items-center gap-2">
+                                            <span>⚠️</span> {issue}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : null}
+                        </div>
+
+                        {/* Phase 6: Additional SEO Metrics */}
+                        <div className="col-span-full border-t border-white/20 pt-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-4 bg-surface-container rounded-xl">
+                                <div className="text-2xl font-bold text-text-primary mb-1">
+                                    {evidence.resources?.images?.altTextMissing ?? '-'}
+                                </div>
+                                <div className="text-xs text-text-tertiary uppercase">Missing Alt Text</div>
+                            </div>
+                            <div className="p-4 bg-surface-container rounded-xl">
+                                <div className="text-2xl font-bold text-text-primary mb-1">
+                                    {evidence.seo?.links?.internal ?? '-'}
+                                </div>
+                                <div className="text-xs text-text-tertiary uppercase">Internal Links</div>
+                            </div>
+                            <div className="p-4 bg-surface-container rounded-xl">
+                                <div className="text-2xl font-bold text-text-primary mb-1">
+                                    {evidence.seo?.links?.external ?? '-'}
+                                </div>
+                                <div className="text-xs text-text-tertiary uppercase">External Links</div>
+                            </div>
+                            <div className="p-4 bg-surface-container rounded-xl">
+                                <div className="text-2xl font-bold text-text-primary mb-1">
+                                    {evidence.onPage.hasContent ? 'Yes' : 'No'}
+                                </div>
+                                <div className="text-xs text-text-tertiary uppercase">Content Detected</div>
                             </div>
                         </div>
                     </div>

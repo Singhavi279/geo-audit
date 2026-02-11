@@ -1,13 +1,15 @@
 'use client';
 
-import type { Scores, Gates } from '@/lib/types';
+import type { Scores, Gates, Evidence } from '@/lib/types';
 
 interface ScoreCardProps {
     scores: Scores;
     gates: Gates;
+    evidence?: Evidence;
+    processing?: boolean;
 }
 
-export default function ScoreCard({ scores, gates }: ScoreCardProps) {
+export default function ScoreCard({ scores, gates, evidence, processing }: ScoreCardProps) {
     const getScoreColor = (score: number) => {
         if (score >= 80) return 'text-green-600';
         if (score >= 50) return 'text-yellow-600';
@@ -40,12 +42,29 @@ export default function ScoreCard({ scores, gates }: ScoreCardProps) {
                     <div className="text-xs text-gray-500">/25</div>
                 </div>
 
-                <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor((scores.performance / 20) * 100)}`}>
-                        {scores.performance}
+                <div className="text-center group relative">
+                    <div className={`text-3xl font-bold ${evidence?.performance ? getScoreColor((scores.performance / 20) * 100) : 'text-gray-400'}`}>
+                        {processing ? (
+                            <span className="inline-block animate-pulse">...</span>
+                        ) : (
+                            evidence?.performance ? scores.performance : '-'
+                        )}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">Performance</div>
+                    <div className="text-xs text-gray-600 mt-1">
+                        Performance
+                        {processing && <span className="ml-1 text-blue-500 animate-spin inline-block">↻</span>}
+                        {evidence?.performanceError && (
+                            <span className="ml-1 text-red-500 cursor-help" title={evidence.performanceError}>⚠️</span>
+                        )}
+                    </div>
                     <div className="text-xs text-gray-500">/20</div>
+
+                    {/* Tooltip for error */}
+                    {evidence?.performanceError && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                            {evidence.performanceError}
+                        </div>
+                    )}
                 </div>
 
                 <div className="text-center">

@@ -152,9 +152,14 @@ function detectAuthor(html: string): boolean {
     const bylinePatterns = [
         /by\s+[A-Z][a-z]+\s+[A-Z][a-z]+/i, // "By John Doe"
         /written\s+by/i,
+        /posted\s+by/i,
+        /published\s+by/i,
+        /curated\s+by/i,
         /author:/i,
-        /class="author"/i,
-        /class="byline"/i,
+        /class="[^"]*author[^"]*"/i,  // loosely matches any class containing 'author'
+        /class="[^"]*byline[^"]*"/i,
+        /id="[^"]*author[^"]*"/i,
+        /rel="author"/i,
         /itemprop="author"/i,
     ];
 

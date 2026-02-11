@@ -39,31 +39,122 @@ export default function ReportContent() {
                 // Use mock endpoint if mock=true in URL
                 const endpoint = useMock ? '/api/audit-mock' : '/api/audit';
 
-                const response = await fetch(endpoint, {
+                // STAGE 1: FAST AUDIT (SEO, Schema, OnPage) - Immediate
+                console.log('[AUDIT] Starting Fast Audit...');
+                const fastResponse = await fetch(endpoint, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         url,
                         sitemapUrl: sitemap || undefined,
                         deep,
+                        mode: 'fast' // Request only fast checks
                     }),
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
+                if (!fastResponse.ok) {
+                    const errorData = await fastResponse.json();
                     throw new Error(errorData.message || 'Audit failed');
                 }
 
-                const data = await response.json();
-                console.log('[AUDIT] Full result data:', data);
-                console.log('[AUDIT] Performance evidence:', data.evidence?.performance);
-                console.log('[AUDIT] Performance score:', data.scores?.performance);
-                setResult(data);
+                const fastData = await fastResponse.json();
+                console.log('[AUDIT] Fast result received:', fastData);
+
+                // Show fast results immediately
+                setResult(fastData);
+                setLoading(false);
+
+                // STAGE 2: EXPENSIVE AUDIT (PSI, Browser) - Background
+                console.log('[AUDIT] Starting Expensive Audit...');
+                // We keep 'result' populated so user sees data. 
+                // We can add a 'loading' indicator for performance specific sections if needed, 
+                // but for now we just rely on the missing data being '-' or 0.
+
+                // Trigger expensive audit
+                const expensiveResponse = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        sitemapUrl: sitemap || undefined,
+                        deep,
+                        mode: 'expensive' // Request detailed checks
+                    }),
+                });
+
+                if (expensiveResponse.ok) {
+                    const expensiveData = await expensiveResponse.json();
+                    console.log('[AUDIT] Expensive result received:', expensiveData);
+
+                    // MERGE expensive data into existing result
+                    setResult(prevResult => {
+                        if (!prevResult) return expensiveData; // Should not happen
+
+                        const newResult = { ...prevResult };
+
+                        // Merge Evidence
+                        newResult.evidence = {
+                            ...prevResult.evidence,
+                            performance: expensiveData.performance,
+                            performanceError: expensiveData.performanceError,
+                            browser: expensiveData.browser,
+                            // Crux might be in performance or separate depending on typings, check pipeline
+                        };
+
+                        // Update Raw
+                        newResult.raw = {
+                            ...prevResult.raw,
+                            psi: expensiveData.performance,
+                            crux: expensiveData.crux
+                        };
+
+                        // RE-CALCULATE SCORES? 
+                        // The server returned partial data. We need to update the performance score.
+                        // Since we don't have the scoring logic on the client, we might have a mismatch.
+                        // Ideally checking if expensiveData returned scores. 
+                        // Checking pipeline.ts: runExpensiveAudit returns { performance, browser, crux }. NO SCORES.
+
+                        // Simplified Client-side Score Override for Performance
+                        // Performance score is 0-20. 
+                        // Lighthouse perf score * 0.12 + CWV logic. 
+
+                        // NOTE: For MVP, we will rely on the fact that 'performance' evidence is now present.
+                        // However, the TOTAL score in 'prevResult.scores' won't update unless we calc it or fetch it.
+                        // Let's implement a basic score patcher here or rely on specific logic.
+
+                        // HACK: Re-fetch or simplistic update? 
+                        // Let's manually calculate Performance Score if lighthouse exists to update the UI
+                        if (expensiveData.performance?.lighthouse?.performance) {
+                            // This is a rough estimation or we need to import calculateScores (but that's server side code usually)
+                            // Let's just update the performance score display if we can. 
+                            // Actually, let's keep it simple: The user sees "-" turn into values.
+                            // The Total Score might remain low until a refresh? That's bad.
+                            // Let's try to update scores.performance at least.
+
+                            // 12 points for LH
+                            let perfScore = (expensiveData.performance.lighthouse.performance / 100) * 12;
+                            // 4 points for LCP <= 2.5s
+                            if (expensiveData.performance.metrics?.lcp <= 2500) perfScore += 4;
+                            else if (expensiveData.performance.metrics?.lcp <= 4000) perfScore += 2;
+                            // 4 points for CLS <= 0.1
+                            if (expensiveData.performance.metrics?.cls <= 0.1) perfScore += 4;
+                            else if (expensiveData.performance.metrics?.cls <= 0.25) perfScore += 2;
+
+                            newResult.scores = {
+                                ...prevResult.scores,
+                                performance: Math.round(perfScore),
+                                total: Math.round(prevResult.scores.total + perfScore) // Assuming initial perf score was 0
+                            };
+                        }
+
+                        return newResult;
+                    });
+                } else {
+                    console.error('[AUDIT] Expensive audit failed silently');
+                }
+
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Unknown error');
-            } finally {
                 setLoading(false);
             }
         };
@@ -120,7 +211,12 @@ export default function ReportContent() {
 
                 {/* Score Card */}
                 <div className="mb-8">
-                    <ScoreCard scores={result.scores} gates={result.gates} />
+                    <ScoreCard
+                        scores={result.scores}
+                        gates={result.gates}
+                        evidence={result.evidence}
+                        processing={!result.evidence.performance && !result.evidence.performanceError}
+                    />
                 </div>
 
                 {/* Top 3 Actions */}

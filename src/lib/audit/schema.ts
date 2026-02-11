@@ -77,38 +77,9 @@ function validateSchema(block: any, types: string[]): void {
         throw new Error('Missing @type');
     }
 
-    // Article validation
-    if (types.includes('Article') || types.includes('NewsArticle') || types.includes('BlogPosting')) {
-        if (!block.headline && !block.name) {
-            throw new Error('Article schema missing headline/name');
-        }
-    }
+    // Relaxed Validation: Only fail on strictly invalid types. 
+    // Missing properties will just be ignored to prevent false alarms.
 
-    // Organization validation
-    if (types.includes('Organization')) {
-        if (!block.name) {
-            throw new Error('Organization schema missing name');
-        }
-    }
-
-    // Person validation
-    if (types.includes('Person')) {
-        if (!block.name) {
-            throw new Error('Person schema missing name');
-        }
-    }
-
-    // Product validation
-    if (types.includes('Product')) {
-        if (!block.name) {
-            throw new Error('Product schema missing name');
-        }
-    }
-
-    // FAQPage validation
-    if (types.includes('FAQPage')) {
-        if (!block.mainEntity || !Array.isArray(block.mainEntity)) {
-            throw new Error('FAQPage schema missing mainEntity array');
-        }
-    }
+    // Original strict checks removed to allow partial schema matches.
+    // e.g. An article without a headline is still better than no schema.
 }
