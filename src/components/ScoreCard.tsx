@@ -10,113 +10,104 @@ interface ScoreCardProps {
 }
 
 export default function ScoreCard({ scores, gates, evidence, processing }: ScoreCardProps) {
-    const getScoreColor = (score: number) => {
-        if (score >= 80) return 'text-green-600';
-        if (score >= 50) return 'text-yellow-600';
+    const getScoreColor = (percentage: number) => {
+        if (percentage >= 80) return 'text-green-600';
+        if (percentage >= 50) return 'text-yellow-600';
         return 'text-red-600';
-    };
-
-    const getScoreBgColor = (score: number) => {
-        if (score >= 80) return 'bg-green-100';
-        if (score >= 50) return 'bg-yellow-100';
-        return 'bg-red-100';
     };
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-8">
             {/* Total Score */}
-            <div className="text-center mb-8">
-                <div className={`text-7xl font-bold ${getScoreColor(scores.total)} mb-2`}>
+            <div className="text-center mb-8 border-b pb-8">
+                <div className={`text-8xl font-black mb-2 tracking-tighter ${getScoreColor(scores.total)}`}>
                     {scores.total}
+                    <span className="text-3xl text-gray-300 font-normal">/100</span>
                 </div>
-                <div className="text-gray-600 text-lg">Overall Score</div>
+                <div className="text-gray-500 uppercase tracking-widest text-sm font-semibold">Citation Readiness Score</div>
             </div>
 
-            {/* Sub-scores */}
-            <div className="grid md:grid-cols-5 gap-4 mb-8">
-                <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor((scores.technical_seo / 25) * 100)}`}>
-                        {scores.technical_seo}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Technical SEO</div>
-                    <div className="text-xs text-gray-500">/25</div>
-                </div>
-
-                <div className="text-center group relative">
-                    <div className={`text-3xl font-bold ${evidence?.performance ? getScoreColor((scores.performance / 20) * 100) : 'text-gray-400'}`}>
-                        {processing ? (
-                            <span className="inline-block animate-pulse">...</span>
-                        ) : (
-                            evidence?.performance ? scores.performance : '-'
-                        )}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                        Performance
-                        {processing && <span className="ml-1 text-blue-500 animate-spin inline-block">↻</span>}
-                        {evidence?.performanceError && (
-                            <span className="ml-1 text-red-500 cursor-help" title={evidence.performanceError}>⚠️</span>
-                        )}
-                    </div>
-                    <div className="text-xs text-gray-500">/20</div>
-
-                    {/* Tooltip for error */}
-                    {evidence?.performanceError && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                            {evidence.performanceError}
-                        </div>
-                    )}
-                </div>
-
-                <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor((scores.structured_data / 15) * 100)}`}>
-                        {scores.structured_data}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Structured Data</div>
-                    <div className="text-xs text-gray-500">/15</div>
-                </div>
-
-                <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor((scores.citation_readiness / 30) * 100)}`}>
-                        {scores.citation_readiness}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Citation Ready</div>
-                    <div className="text-xs text-gray-500">/30</div>
-                </div>
-
-                <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor((scores.provenance / 10) * 100)}`}>
-                        {scores.provenance}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Provenance</div>
-                    <div className="text-xs text-gray-500">/10</div>
-                </div>
+            {/* Sub-scores Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                <ScoreItem
+                    label="Content & Intent"
+                    score={scores.content_intent}
+                    max={28}
+                    icon="📝"
+                    color={getScoreColor((scores.content_intent / 28) * 100)}
+                />
+                <ScoreItem
+                    label="Trust & E-E-A-T"
+                    score={scores.trust_eat}
+                    max={18}
+                    icon="🛡️"
+                    color={getScoreColor((scores.trust_eat / 18) * 100)}
+                />
+                <ScoreItem
+                    label="Crawl & Arch"
+                    score={scores.crawl_architecture}
+                    max={16}
+                    icon="🕸️"
+                    color={getScoreColor((scores.crawl_architecture / 16) * 100)}
+                />
+                <ScoreItem
+                    label="Structured Data"
+                    score={scores.structured_data}
+                    max={12}
+                    icon="🏗️"
+                    color={getScoreColor((scores.structured_data / 12) * 100)}
+                />
+                <ScoreItem
+                    label="Page Experience"
+                    score={scores.page_experience}
+                    max={10}
+                    icon="⚡"
+                    color={getScoreColor((scores.page_experience / 10) * 100)}
+                />
+                <ScoreItem
+                    label="Extractability"
+                    score={scores.llm_extractability}
+                    max={10}
+                    icon="🤖"
+                    color={getScoreColor((scores.llm_extractability / 10) * 100)}
+                />
+                <ScoreItem
+                    label="Discover"
+                    score={scores.discover_readiness}
+                    max={6}
+                    icon="📰"
+                    color={getScoreColor((scores.discover_readiness / 6) * 100)}
+                />
             </div>
 
             {/* Gates */}
-            <div className="border-t pt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Eligibility Gates</h3>
-                <div className="flex flex-wrap gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${gates.fetchable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {gates.fetchable ? '✓' : '✗'} Fetchable
-                    </span>
-
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${gates.indexable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {gates.indexable ? '✓' : '✗'} Indexable
-                    </span>
-
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${gates.canonical_ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {gates.canonical_ok ? '✓' : '✗'} Canonical OK
-                    </span>
-
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${gates.crawl_ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {gates.crawl_ok ? '✓' : '✗'} Crawl OK
-                    </span>
-                </div>
+            <div className="bg-gray-50 rounded-xl p-4 flex flex-wrap gap-3 items-center justify-center">
+                <span className="text-xs font-bold text-gray-400 uppercase mr-2">Critical Gates:</span>
+                <GateStatus label="Fetchable" status={gates.fetchable} />
+                <GateStatus label="Indexable" status={gates.indexable} />
+                <GateStatus label="Canonical" status={gates.canonical_ok} />
+                <GateStatus label="Mobile" status={gates.mobile_friendly} />
             </div>
         </div>
+    );
+}
+
+function ScoreItem({ label, score, max, icon, color }: { label: string, score: number, max: number, icon: string, color: string }) {
+    return (
+        <div className="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors">
+            <span className="text-2xl mb-1">{icon}</span>
+            <div className={`text-2xl font-bold ${color}`}>
+                {score}<span className="text-gray-300 text-sm font-normal">/{max}</span>
+            </div>
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide text-center mt-1">{label}</div>
+        </div>
+    );
+}
+
+function GateStatus({ label, status }: { label: string, status: boolean }) {
+    return (
+        <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${status ? 'bg-white border-green-200 text-green-700 shadow-sm' : 'bg-red-50 border-red-100 text-red-600'}`}>
+            {status ? '✓' : '✗'} {label}
+        </span>
     );
 }

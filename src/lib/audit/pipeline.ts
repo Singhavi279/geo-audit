@@ -1,3 +1,6 @@
+import { analyzeContent } from './content';
+import { analyzeTrust } from './trust';
+import { analyzeLLM } from './llm';
 // Main audit pipeline orchestrator
 
 import type { AuditInput, AuditResult, Finding } from '../types';
@@ -42,13 +45,30 @@ export async function runFastAudit(input: AuditInput): Promise<AuditResult> {
             fetchResult.redirectChain
         );
 
-        // Run advanced checks (free checks, no API needed)
-        const advancedChecks = runAdvancedChecks(fetchResult);
+        // 4. Run Analysis (Parallel)
+        console.log('[AUDIT] Starting parallel analysis modules...');
+        const [
+            sitemapResult,
+            advanced,
+            citation,
+            schema,
+            content,
+            trust,
+            llm
+        ] = await Promise.all([
+            analyzeSitemap(input.sitemapUrl || robotsResult.sitemaps[0], fetchResult.finalUrl, input.deep || false),
+            Promise.resolve(runAdvancedChecks(fetchResult)),
+            Promise.resolve(analyzeCitationReadiness(fetchResult.html, onPageBase)),
+            Promise.resolve(extractSchema(fetchResult.html)),
+            Promise.resolve(analyzeContent(fetchResult.html)),
+            Promise.resolve(analyzeTrust(fetchResult.html)),
+            analyzeLLM(fetchResult.html, fetchResult.finalUrl)
+        ]);
 
         // Merge advanced checks into onPage evidence
         const onPage = {
             ...onPageBase,
-            ...advancedChecks.onPage,
+            ...advanced.onPage,
         };
 
         // Combine robots.txt gate with preliminary gates
@@ -57,22 +77,19 @@ export async function runFastAudit(input: AuditInput): Promise<AuditResult> {
             robots_allowed: robotsResult.allowed,
         };
 
-        // Step F: Schema extraction (cheap, always run)
-        const schemaEvidence = extractSchema(fetchResult.html);
-
-        // Step I: Citation readiness (cheap, always run)
-        const citationEvidence = analyzeCitationReadiness(fetchResult.html, onPage);
-
         // Build evidence object (Performance/Browser missing)
         const evidence = {
             onPage,
             performance: undefined,
             performanceError: undefined,
-            schema: schemaEvidence,
-            citation: citationEvidence,
-            resources: advancedChecks.resources,
-            seo: advancedChecks.seo,
+            schema,
+            citation,
+            resources: advanced.resources,
+            seo: advanced.seo,
             browser: undefined,
+            content,
+            trust,
+            llm
         };
 
         // Calculate scores (Performance will be 0)
@@ -88,23 +105,11 @@ export async function runFastAudit(input: AuditInput): Promise<AuditResult> {
         findings.push({ category: 'on-page', type: 'canonical', value: onPage.canonical });
         findings.push({ category: 'on-page', type: 'h1_count', value: onPage.h1.length });
 
-        // Step E: Sitemap analysis (optional, run if provided or auto-discover)
-        let sitemapSummary = undefined;
-        if (input.sitemapUrl || robotsResult.sitemaps.length > 0) {
-            const sitemapUrl = input.sitemapUrl || robotsResult.sitemaps[0] || null;
-            const sitemapResult = await analyzeSitemap(
-                sitemapUrl,
-                fetchResult.finalUrl,
-                input.deep || false
-            );
-
-            if (sitemapResult) {
-                sitemapSummary = {
-                    summary: sitemapResult.summary,
-                    topIssues: sitemapResult.topIssues,
-                };
-            }
-        }
+        // Step E: Sitemap (already run in parallel above if needed, but let's just use the result)
+        const sitemapSummary = sitemapResult ? {
+            summary: sitemapResult.summary,
+            topIssues: sitemapResult.topIssues
+        } : undefined;
 
         const elapsedTime = Date.now() - startTime;
         console.log(`[AUDIT] Fast audit completed in ${elapsedTime}ms`);

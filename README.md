@@ -1,25 +1,39 @@
-# GEO Audit MVP
+# GEO Audit
 
-> Audit any URL to increase its chance of being selected as a **source** in **LLM citations** and **Google AI results**, while improving **core SEO**.
-
-## Overview
-
-GEO Audit is a lightweight, no-login web application that audits URLs across 5 key dimensions:
-
-1. **Technical SEO** (25 points) - Indexability, canonicals, meta tags
-2. **Performance & CWV** (20 points) - PageSpeed Insights, Core Web Vitals
-3. **Structured Data** (15 points) - JSON-LD schema validation
-4. **Citation Readiness** (30 points) - Answer-first patterns, quotability, extractability
-5. **Provenance** (10 points) - Author attribution, dates, trust signals
-
-**Total Score:** 0-100 points with transparent sub-scores
-
----
+A next-generation AI Search Optimization (AISO) audit tool designed to evaluate websites for "Citation Readiness" in the age of LLMs (ChatGPT, Gemini, Perplexity).
 
 ## Features
 
-✅ Single URL audit with optional sitemap analysis  
-✅ Deep crawl mode (up to 150 URLs + PSI on top 5)  
-✅ Prioritized recommendations with impact/effort scoring  
-✅ Evidence-backed insights for AI citations + SEO  
-✅ JSON & CSV export  
+- **7-Category Scoring Model**: Evaluates Content, Trust (E-E-A-T), Crawlability, Schema, UX, Extractability (LLM), and Discover Readiness.
+- **Deep Evidence Extraction**: Analyzes HTML structure, metadata, and content quality.
+- **SEO Deep Dive**: Checks for header hierarchy, link balance, and image accessibility.
+- **Technical Loader**: Real-time feedback on audit progress.
+- **Actionable Recommendations**: Prioritized fixes to improve LLM visibility and SEO rankings.
+
+## Getting Started
+
+1.  Cloning the repository:
+    ```bash
+    git clone <repository-url>
+    cd geo-audit
+    ```
+
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+
+3.  Run the development server:
+    ```bash
+    npm run dev
+    ```
+
+4.  Open [http://localhost:3000](http://localhost:3000) with your browser.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Parser**: Cheerio
+- **Browser Automation**: Playwright (optional for deep checks)

@@ -107,11 +107,20 @@ export function extractGates(
     // Crawl OK - will be determined by robots.txt check (handled separately)
     const crawl_ok = true; // Placeholder, will be updated by robots.txt check
 
+    // Mobile Friendly Check (MVP: Check for viewport meta tag)
+    const mobile_friendly = !!$('meta[name="viewport"]').attr('content');
+
+    // Spam Check (MVP: Basic keyword stuffing check - mostly placeholder for now)
+    // Real spam checking needs complex specific logic or AI analysis
+    const spam_flags = false; // Default to false (passing) for MVP
+
     const gates: Gates = {
         fetchable,
         indexable,
         canonical_ok,
         crawl_ok,
+        mobile_friendly,
+        spam_flags
     };
 
     return {

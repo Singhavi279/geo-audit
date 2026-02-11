@@ -19,11 +19,14 @@ export interface AuditResult {
 
 export interface Scores {
   total: number;
-  technical_seo: number;
-  performance: number;
-  structured_data: number;
-  citation_readiness: number;
-  provenance: number;
+  // 7-Category Model (100 pts)
+  content_intent: number;       // 28 pts
+  trust_eat: number;           // 18 pts
+  crawl_architecture: number;  // 16 pts
+  structured_data: number;     // 12 pts
+  page_experience: number;     // 10 pts
+  llm_extractability: number;  // 10 pts
+  discover_readiness: number;  // 6 pts
 }
 
 export interface Gates {
@@ -31,6 +34,8 @@ export interface Gates {
   indexable: boolean;
   canonical_ok: boolean;
   crawl_ok: boolean;
+  mobile_friendly: boolean; // New
+  spam_flags: boolean;      // New
 }
 
 export interface Finding {
@@ -48,6 +53,66 @@ export interface Evidence {
   resources?: ResourceEvidence;
   seo?: SEOEvidence;
   browser?: BrowserEvidence;
+  // New Modules
+  trust?: TrustEvidence;
+  content?: ContentEvidence;
+  llm?: LLMEvidence;
+}
+
+export interface TrustEvidence {
+  author: { found: boolean; name: string | null; url: string | null };
+  policyLinks: { privacy: boolean; terms: boolean; editorial: boolean };
+  contactInfo: { found: boolean; details: string[] };
+  citations: { externalLinkCount: number; academicSources: number };
+  footnotes: boolean;
+}
+
+export interface ContentEvidence {
+  primaryIntent: 'informational' | 'transactional' | 'mixed' | 'unknown';
+  wordCount: number;
+  mediaCount: { images: number; withAlt: number; videos: number };
+  freshness: {
+    lastUpdated: string | null;
+    published: string | null;
+    isRecent: boolean; // < 2 years
+  };
+  details: {
+    hasTldr: boolean;
+    hasSummary: boolean;
+    hasDefinitions: boolean;
+  };
+}
+
+export interface LLMEvidence {
+  llmsTxt: { exists: boolean; path: string | null };
+  semanticDensity: {
+    h1: number;
+    h2: number;
+    h3: number;
+    p: number;
+    listItems: number;
+  };
+  quotable: {
+    shortSentences: number;
+    definitions: number;
+  };
+}
+
+// Browser-based evidence (optional, requires Playwright)
+export interface BrowserEvidence {
+  consoleErrors?: string[];
+  screenshot?: string; // Base64 encoded
+  renderTime?: number; // milliseconds
+  jsErrors?: number;
+  resources?: {
+    actualLoaded: number;
+    failed: number;
+    totalSize: number; // KB
+  };
+  mobile?: {
+    isResponsive: boolean;
+    viewportMeta: string | null;
+  };
 }
 
 export interface OnPageEvidence {
@@ -132,7 +197,7 @@ export interface CitationEvidence {
 }
 
 export interface Recommendation {
-  category: 'technical_seo' | 'performance' | 'structured_data' | 'citation_readiness' | 'provenance';
+  category: 'content' | 'trust' | 'crawl' | 'schema' | 'ux' | 'llm' | 'discover';
   title: string;
   description: string;
   evidence: string;

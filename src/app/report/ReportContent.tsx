@@ -114,38 +114,9 @@ export default function ReportContent() {
                         // Ideally checking if expensiveData returned scores. 
                         // Checking pipeline.ts: runExpensiveAudit returns { performance, browser, crux }. NO SCORES.
 
-                        // Simplified Client-side Score Override for Performance
-                        // Performance score is 0-20. 
-                        // Lighthouse perf score * 0.12 + CWV logic. 
-
-                        // NOTE: For MVP, we will rely on the fact that 'performance' evidence is now present.
-                        // However, the TOTAL score in 'prevResult.scores' won't update unless we calc it or fetch it.
-                        // Let's implement a basic score patcher here or rely on specific logic.
-
-                        // HACK: Re-fetch or simplistic update? 
-                        // Let's manually calculate Performance Score if lighthouse exists to update the UI
-                        if (expensiveData.performance?.lighthouse?.performance) {
-                            // This is a rough estimation or we need to import calculateScores (but that's server side code usually)
-                            // Let's just update the performance score display if we can. 
-                            // Actually, let's keep it simple: The user sees "-" turn into values.
-                            // The Total Score might remain low until a refresh? That's bad.
-                            // Let's try to update scores.performance at least.
-
-                            // 12 points for LH
-                            let perfScore = (expensiveData.performance.lighthouse.performance / 100) * 12;
-                            // 4 points for LCP <= 2.5s
-                            if (expensiveData.performance.metrics?.lcp <= 2500) perfScore += 4;
-                            else if (expensiveData.performance.metrics?.lcp <= 4000) perfScore += 2;
-                            // 4 points for CLS <= 0.1
-                            if (expensiveData.performance.metrics?.cls <= 0.1) perfScore += 4;
-                            else if (expensiveData.performance.metrics?.cls <= 0.25) perfScore += 2;
-
-                            newResult.scores = {
-                                ...prevResult.scores,
-                                performance: Math.round(perfScore),
-                                total: Math.round(prevResult.scores.total + perfScore) // Assuming initial perf score was 0
-                            };
-                        }
+                        // Note: We rely on server for scores. Client-side re-calc is removed.
+                        // Ideally the expensive endpoint should re-calculate scores on server and return them.
+                        // For MVP, we accept that 'Page Experience' score might lag until full reload or we implement server-side re-score in expensive handler.
 
                         return newResult;
                     });
@@ -154,7 +125,6 @@ export default function ReportContent() {
                 }
 
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Unknown error');
                 setLoading(false);
             }
         };

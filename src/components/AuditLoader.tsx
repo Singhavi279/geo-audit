@@ -2,14 +2,14 @@
 import { useState, useEffect } from 'react';
 
 const TASKS = [
-    { message: 'Initializing audit scanner...', minProgress: 0, maxProgress: 10 },
-    { message: 'Fetching page HTML & resources...', minProgress: 10, maxProgress: 25 },
-    { message: 'Normalizing URL & checking redirects...', minProgress: 25, maxProgress: 35 },
-    { message: 'Querying Google PageSpeed Insights...', minProgress: 35, maxProgress: 60 },
-    { message: 'Analyzing Core Web Vitals (CrUX)...', minProgress: 60, maxProgress: 75 },
-    { message: 'Running browser automation checks...', minProgress: 75, maxProgress: 85 },
-    { message: 'Evaluating LLM citation readiness...', minProgress: 85, maxProgress: 95 },
-    { message: 'Compiling final report...', minProgress: 95, maxProgress: 99 },
+    { message: 'Calibrating audit engine & extraction modules...', minProgress: 0, maxProgress: 10 },
+    { message: 'Extracting DOM structure & asset waterfall...', minProgress: 10, maxProgress: 25 },
+    { message: 'Tracing redirect chain & canonical signals...', minProgress: 25, maxProgress: 35 },
+    { message: 'Benchmarking Core Web Vitals (Lighthouse)...', minProgress: 35, maxProgress: 60 },
+    { message: 'Fetching real-user field data (CrUX)...', minProgress: 60, maxProgress: 75 },
+    { message: 'Simulating user interaction & JS execution...', minProgress: 75, maxProgress: 85 },
+    { message: 'Analyzing semantic density & citation probability...', minProgress: 85, maxProgress: 95 },
+    { message: 'Synthesizing recommendations & scoring...', minProgress: 95, maxProgress: 99 },
 ];
 
 export default function AuditLoader() {

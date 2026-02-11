@@ -3,7 +3,7 @@
 import type { Recommendation, Gates, Evidence } from '../types';
 
 /**
- * Generate prioritized recommendations
+ * Generate prioritized recommendations based on 100-point model
  */
 export function generateRecommendations(
     gates: Gates,
@@ -11,62 +11,104 @@ export function generateRecommendations(
 ): Recommendation[] {
     const recommendations: Recommendation[] = [];
 
-    // Gate failures (highest priority)
+    // --- GATES (Critical) ---
     if (!gates.fetchable) {
-        recommendations.push({
-            category: 'technical_seo',
-            title: 'Fix page fetchability',
-            description: `Page returned status ${evidence.onPage.statusCode}. Ensure the page is accessible and returns 200 OK.`,
-            evidence: `Status: ${evidence.onPage.statusCode}`,
-            whyItMatters: {
-                ai: 'AI systems cannot process or cite pages that are not accessible.',
-                seo: '4xx/5xx errors prevent indexing entirely.',
-            },
-            impact: 5,
-            effort: 3,
-            priority: 5 / 3,
-            scoreImpact: 20,
-        });
+        recommendations.push(createRecommendation(
+            'crawl', // Maps to Crawl & Arch
+            'Fix page fetchability',
+            `Page returned status ${evidence.onPage.statusCode}. Ensure the page is accessible and returns 200 OK.`,
+            `Status: ${evidence.onPage.statusCode}`,
+            5, 5
+        ));
     }
 
     if (!gates.indexable) {
-        recommendations.push({
-            category: 'technical_seo',
-            title: 'Remove noindex directive',
-            description: 'Page has noindex in robots meta or header, blocking search indexing.',
-            evidence: `Robots meta: ${evidence.onPage.robotsMeta.join(', ')} | Header: ${evidence.onPage.robotsHeader || 'none'}`,
-            whyItMatters: {
-                ai: 'Noindex blocks all search engine indexing, making the page invisible to AI systems.',
-                seo: 'Critical: Page will not appear in search results.',
-            },
-            impact: 5,
-            effort: 1,
-            priority: 5,
-            scoreImpact: 20,
-        });
+        recommendations.push(createRecommendation(
+            'crawl',
+            'Remove noindex directive',
+            'Page has noindex in robots meta or header, blocking search indexing.',
+            `Robots: ${evidence.onPage.robotsMeta.join(', ')}`,
+            5, 1
+        ));
     }
 
+    if (!gates.mobile_friendly) {
+        recommendations.push(createRecommendation(
+            'ux',
+            'Make page mobile-friendly',
+            'Viewport meta tag missing or invalid. Ensure page is optimized for mobile devices.',
+            'No valid viewport tag found',
+            5, 3
+        ));
+    }
+
+    // --- 1. CONTENT (28 pts) ---
+    if (evidence.content?.primaryIntent === 'unknown') {
+        recommendations.push(createRecommendation(
+            'content',
+            'Clarify primary search intent',
+            'Content intent (informational, transactional, etc.) is unclear. optimizing for a specific user goal.',
+            'Intent detected: unknown',
+            4, 3
+        ));
+    }
+
+    if (evidence.content?.wordCount && evidence.content.wordCount < 500) {
+        recommendations.push(createRecommendation(
+            'content',
+            'Expand content depth',
+            'Content is thin (<500 words). Expand with more details, examples, or comprehensive coverage.',
+            `Word count: ${evidence.content.wordCount}`,
+            3, 3
+        ));
+    }
+
+    if (evidence.content && !evidence.content.details.hasSummary && !evidence.content.details.hasTldr) {
+        recommendations.push(createRecommendation(
+            'content',
+            'Add TL;DR or Summary',
+            'AI models look for concise summaries at the start of content. Add a TL;DR or key takeaways section.',
+            'No summary/TLDR detected',
+            4, 2
+        ));
+    }
+
+    // --- 2. TRUST (18 pts) ---
+    if (evidence.trust && !evidence.trust.author.found) {
+        recommendations.push(createRecommendation(
+            'trust',
+            'Add explicit author byline',
+            'No clear author detected. Add a visible byline and "Person" schema to establish expertise.',
+            'No author found',
+            4, 1
+        ));
+    }
+
+    if (evidence.trust && evidence.trust.citations.externalLinkCount === 0) {
+        recommendations.push(createRecommendation(
+            'trust',
+            'Cite external sources',
+            'No external citations found. Link to authoritative sources to build trust and network.',
+            '0 external links',
+            3, 2
+        ));
+    }
+
+    // --- 3. CRAWL (16 pts) ---
     if (!gates.canonical_ok) {
-        recommendations.push({
-            category: 'technical_seo',
-            title: 'Add or fix canonical tag',
-            description: 'Missing or malformed canonical link. Add a valid self-referencing canonical.',
-            evidence: `Canonical: ${evidence.onPage.canonical || 'missing'}`,
-            whyItMatters: {
-                ai: 'Canonicals help AI systems attribute the correct source version.',
-                seo: 'Prevents duplicate content issues and consolidates ranking signals.',
-            },
-            impact: 4,
-            effort: 1,
-            priority: 4,
-            scoreImpact: 15,
-        });
+        recommendations.push(createRecommendation(
+            'crawl',
+            'Fix canonical tag',
+            'Canonical tag is missing or invalid. Ensure self-referencing canonical exists.',
+            `Canonical: ${evidence.onPage.canonical || 'missing'}`,
+            4, 1
+        ));
     }
 
-    // Technical SEO
+    // Technical SEO -> Content/Crawl
     if (!evidence.onPage.title) {
         recommendations.push(createRecommendation(
-            'technical_seo',
+            'content', // Title is content/relevance
             'Add title tag',
             'Missing title tag. Add a descriptive, unique title (50-60 characters).',
             'No title tag found',
@@ -75,7 +117,7 @@ export function generateRecommendations(
         ));
     } else if (evidence.onPage.title.length < 20 || evidence.onPage.title.length > 70) {
         recommendations.push(createRecommendation(
-            'technical_seo',
+            'content',
             'Optimize title length',
             'Title should be 50-60 characters for optimal display in search results.',
             `Current length: ${evidence.onPage.title.length} chars`,
@@ -86,7 +128,7 @@ export function generateRecommendations(
 
     if (!evidence.onPage.metaDescription) {
         recommendations.push(createRecommendation(
-            'technical_seo',
+            'content',
             'Add meta description',
             'Missing meta description. Add a compelling summary (150-160 characters).',
             'No meta description found',
@@ -95,166 +137,95 @@ export function generateRecommendations(
         ));
     }
 
-    // Structured data
+    // --- SEO Deep Dive (Images, Links, Headers) ---
+    if (evidence.resources?.images?.altTextMissing && evidence.resources.images.altTextMissing > 0) {
+        recommendations.push(createRecommendation(
+            'content',
+            'Add missing image alt text',
+            `Found ${evidence.resources.images.altTextMissing} images without alt text. Add descriptive alt text for accessibility and SEO.`,
+            `${evidence.resources.images.altTextMissing} images missing alt tags`,
+            3, 2
+        ));
+    }
+
+    if (evidence.seo?.headerStructure && !evidence.seo.headerStructure.valid) {
+        recommendations.push(createRecommendation(
+            'content',
+            'Fix heading hierarchy',
+            'Heading structure is invalid (e.g. skipped levels like H2 -> H4). Maintain a logical outline.',
+            evidence.seo.headerStructure.issues[0] || 'Invalid heading structure',
+            3, 2
+        ));
+    }
+
+    if (evidence.seo?.links) {
+        if (evidence.seo.links.internal === 0) {
+            recommendations.push(createRecommendation(
+                'crawl',
+                'Add internal links',
+                'No internal links found. Internal linking helps search engines and AI agents understand site structure.',
+                '0 internal links',
+                3, 2
+            ));
+        }
+    }
+
+    // --- 4. SCHEMA (12 pts) ---
     if (evidence.schema.types.length === 0) {
-        recommendations.push({
-            category: 'structured_data',
-            title: 'Add structured data (JSON-LD)',
-            description: 'No structured data detected. Add relevant schema markup (Article, FAQPage, Organization, etc.).',
-            evidence: 'No JSON-LD blocks found',
-            whyItMatters: {
-                ai: 'Schema helps LLMs identify content type, author, and entity relationships for better citations.',
-                seo: 'Enables rich results and improves entity understanding.',
-            },
-            impact: 4,
-            effort: 2,
-            priority: 2,
-            scoreImpact: 10,
-        });
-    } else if (!evidence.schema.valid || evidence.schema.errors.length > 0) {
-        recommendations.push({
-            category: 'structured_data',
-            title: 'Fix structured data errors',
-            description: 'Schema validation errors detected. Review and fix JSON-LD markup.',
-            evidence: `Errors: ${evidence.schema.errors.slice(0, 2).join('; ')}`,
-            whyItMatters: {
-                ai: 'Invalid schema may be ignored by AI systems.',
-                seo: 'Errors prevent rich results eligibility.',
-            },
-            impact: 3,
-            effort: 2,
-            priority: 1.5,
-            scoreImpact: 5,
-        });
-    }
-
-    // Performance
-    if (evidence.performance?.lighthouse) {
-        const perfScore = evidence.performance.lighthouse.performance;
-        if (perfScore < 50) {
-            recommendations.push({
-                category: 'performance',
-                title: 'Improve page performance',
-                description: 'Low performance score. Focus on LCP, CLS, and reducing blocking resources.',
-                evidence: `Performance score: ${perfScore}/100`,
-                whyItMatters: {
-                    ai: 'Slow pages may timeout during AI crawling or indexing.',
-                    seo: 'Performance is a ranking factor; poor CWVs hurt visibility.',
-                },
-                impact: 4,
-                effort: 4,
-                priority: 1,
-                scoreImpact: 10,
-            });
-        }
-
-        const lcp = evidence.performance.metrics?.lcp;
-        if (lcp && lcp > 2500) {
-            recommendations.push({
-                category: 'performance',
-                title: 'Optimize Largest Contentful Paint (LCP)',
-                description: 'LCP exceeds recommended threshold. Optimize images, fonts, and server response time.',
-                evidence: `LCP: ${Math.round(lcp)}ms (target: <2500ms)`,
-                whyItMatters: {
-                    ai: 'Slow loading content may be incomplete during AI crawling.',
-                    seo: 'LCP is a Core Web Vital and ranking factor.',
-                },
-                impact: 4,
-                effort: 3,
-                priority: 4 / 3,
-                scoreImpact: 10,
-            });
-        }
-    }
-
-    // Citation readiness
-    if (!evidence.citation.answerFirst) {
-        recommendations.push({
-            category: 'citation_readiness',
-            title: 'Add answer-first content',
-            description: 'Start with a clear definition or summary in the first 400-600 characters.',
-            evidence: 'No answer-first pattern detected',
-            whyItMatters: {
-                ai: 'LLMs heavily favor pages that provide direct answers early for citation.',
-                seo: 'Featured snippet and AI Overview eligibility.',
-            },
-            impact: 5,
-            effort: 2,
-            priority: 2.5,
-            scoreImpact: 15,
-        });
-    }
-
-    if (evidence.citation.details.h1Count === 0) {
         recommendations.push(createRecommendation(
-            'citation_readiness',
-            'Add H1 heading',
-            'Missing H1. Add exactly one H1 that clearly states the page topic.',
-            'No H1 found',
-            4,
-            1
+            'schema',
+            'Add structured data',
+            'No schema markup detected. Add Article, Product, or Organization schema.',
+            'No schema found',
+            4, 2
         ));
-    } else if (evidence.citation.details.h1Count > 1) {
+    } else if (evidence.schema.errors.length > 0) {
         recommendations.push(createRecommendation(
-            'citation_readiness',
-            'Use single H1',
-            'Multiple H1s detected. Use exactly one H1 per page for clarity.',
-            `Found ${evidence.citation.details.h1Count} H1s`,
-            3,
-            1
+            'schema',
+            'Fix schema validation errors',
+            'Structured data contains syntax errors. Validate with Schema.org validator.',
+            `${evidence.schema.errors.length} errors found`,
+            3, 2
         ));
     }
 
-    if (evidence.citation.details.h2Count < 3) {
+    // --- 5. UX (10 pts) ---
+    if (evidence.performance?.lighthouse?.performance && evidence.performance.lighthouse.performance < 0.5) {
         recommendations.push(createRecommendation(
-            'citation_readiness',
-            'Add more subheadings (H2/H3)',
-            'Insufficient heading structure. Add H2/H3 sections to organize content.',
-            `H2s: ${evidence.citation.details.h2Count}, H3s: ${evidence.citation.details.h3Count}`,
-            3,
-            2
+            'ux',
+            'Improve Core Web Vitals',
+            'Page performance is poor (Lighthouse < 50). Optimize LCP and reduce layout shift.',
+            `Score: ${Math.round(evidence.performance.lighthouse.performance * 100)}`,
+            4, 4
         ));
     }
 
-    if (evidence.citation.quotableSpans < 10) {
-        recommendations.push({
-            category: 'citation_readiness',
-            title: 'Increase quotable content',
-            description: 'Add more short, standalone sentences and bullet points that can be easily quoted.',
-            evidence: `Only ${evidence.citation.quotableSpans} quotable spans found`,
-            whyItMatters: {
-                ai: 'LLMs prefer short, clear statements for direct citations.',
-                seo: 'Improves featured snippet eligibility.',
-            },
-            impact: 4,
-            effort: 2,
-            priority: 2,
-            scoreImpact: 10,
-        });
+    // --- 6. LLM (10 pts) ---
+    if (evidence.llm && !evidence.llm.llmsTxt.exists) {
+        recommendations.push(createRecommendation(
+            'llm',
+            'Add /llms.txt file',
+            'Create an /llms.txt file to guide AI scrapers to your best content.',
+            'File not found (404)',
+            3, 1
+        ));
     }
 
-    if (evidence.citation.jsTrapped) {
-        recommendations.push({
-            category: 'citation_readiness',
-            title: 'Fix JavaScript-trapped content',
-            description: 'Content appears to be heavily reliant on JavaScript. Ensure critical content is in HTML.',
-            evidence: `SPA markers: ${evidence.citation.details.spaMarkers.join(', ')}`,
-            whyItMatters: {
-                ai: 'AI crawlers may not execute JavaScript, missing your content entirely.',
-                seo: 'Search engines prefer server-rendered content for reliable indexing.',
-            },
-            impact: 5,
-            effort: 5,
-            priority: 1,
-            scoreImpact: 15,
-        });
+    if (evidence.llm && evidence.llm.quotable.shortSentences < 5) {
+        recommendations.push(createRecommendation(
+            'llm',
+            'Improve quotability',
+            'Content lacks short, punchy statements. Add definitions or clear distinct claims.',
+            'Few short sentences found',
+            3, 2
+        ));
     }
 
     // Browser checks (Playwright)
     if (evidence.browser) {
         if (evidence.browser.jsErrors && evidence.browser.jsErrors > 0) {
             recommendations.push({
-                category: 'technical_seo',
+                category: 'crawl',
                 title: 'Fix JavaScript errors',
                 description: `${evidence.browser.jsErrors} JavaScript error(s) detected during page load. Fix these errors to improve page reliability.`,
                 evidence: (evidence.browser.consoleErrors || []).slice(0, 2).join(' | '),
@@ -271,7 +242,7 @@ export function generateRecommendations(
 
         if (evidence.browser.consoleErrors && evidence.browser.consoleErrors.length > 0 && !evidence.browser.jsErrors) {
             recommendations.push({
-                category: 'technical_seo',
+                category: 'crawl',
                 title: 'Review console errors',
                 description: `${evidence.browser.consoleErrors.length} console error(s) logged. These may indicate non-critical issues or third-party script failures.`,
                 evidence: evidence.browser.consoleErrors.slice(0, 5).join(' | '),
@@ -289,7 +260,7 @@ export function generateRecommendations(
         // If render time is slow
         if (evidence.browser.renderTime && evidence.browser.renderTime > 3000) {
             recommendations.push({
-                category: 'performance',
+                category: 'ux',
                 title: 'Improve render time',
                 description: `Page took ${Math.round(evidence.browser.renderTime / 1000)}s to render. Optimize to under 3 seconds.`,
                 evidence: `Render time: ${evidence.browser.renderTime}ms`,
@@ -308,7 +279,7 @@ export function generateRecommendations(
     // Provenance
     if (!evidence.citation.details.authorFound) {
         recommendations.push({
-            category: 'provenance',
+            category: 'trust',
             title: 'Add author byline',
             description: 'No author detected. Add author meta tag and visible byline.',
             evidence: 'No author found',
@@ -325,7 +296,7 @@ export function generateRecommendations(
 
     if (!evidence.citation.details.dateFound) {
         recommendations.push({
-            category: 'provenance',
+            category: 'trust',
             title: 'Add published/updated date',
             description: 'No date detected. Add datePublished and dateModified in schema and visible on page.',
             evidence: 'No date found',
@@ -340,11 +311,11 @@ export function generateRecommendations(
         });
     }
 
-    // Sort: gate failures first, then by priority
+    // Sort: gate failures first, then by priority (impact/effort)
     return recommendations.sort((a, b) => {
         // Gate failures always first
-        const aIsGate = a.impact === 5 && a.title.toLowerCase().includes('fix');
-        const bIsGate = b.impact === 5 && b.title.toLowerCase().includes('fix');
+        const aIsGate = a.impact === 5 && a.category === 'crawl' && (a.title.includes('fetch') || a.title.includes('index'));
+        const bIsGate = b.impact === 5 && b.category === 'crawl' && (b.title.includes('fetch') || b.title.includes('index'));
 
         if (aIsGate && !bIsGate) return -1;
         if (!aIsGate && bIsGate) return 1;
@@ -361,42 +332,50 @@ function createRecommendation(
     category: Recommendation['category'],
     title: string,
     description: string,
-    evidence: string,
+    evidenceStr: string,
     impact: number,
     effort: number
 ): Recommendation {
-    const defaultMatters = {
-        technical_seo: {
-            ai: 'Improves page eligibility for AI indexing and citations.',
-            seo: 'Enhances search visibility and ranking potential.',
+    const defaultMatters: Record<string, { ai: string; seo: string }> = {
+        content: {
+            ai: 'Clear, structured content with summaries is easier for AI to ingest and synthesize.',
+            seo: 'High-quality content satisfying user intent ranks better.',
         },
-        performance: {
-            ai: 'Faster pages are more reliably crawled and indexed by AI systems.',
-            seo: 'Performance is a Core Web Vital and ranking factor.',
+        trust: {
+            ai: 'AI systems prioritize content from identifiable, authoritative sources.',
+            seo: 'E-E-A-T signals are critical for ranking, especially in YMYL topics.',
         },
-        structured_data: {
-            ai: 'Helps AI systems understand content type and entities.',
-            seo: 'Enables rich results and improves search understanding.',
+        crawl: {
+            ai: 'If AI bots cannot crawl your page, they cannot learn from it.',
+            seo: 'Technical foundation is required for indexing.',
         },
-        citation_readiness: {
-            ai: 'Makes content easier for LLMs to extract and cite accurately.',
-            seo: 'Improves featured snippet and AI Overview eligibility.',
+        schema: {
+            ai: 'Schema provides explicit semantic meaning to AI models.',
+            seo: 'Enables rich snippets and better entity understanding.',
         },
-        provenance: {
-            ai: 'Increases trust signals for citation selection.',
-            seo: 'Strengthens E-E-A-T (Experience, Expertise, Authoritativeness, Trust).',
+        ux: {
+            ai: 'Slow or broken pages may be skipped by resource-constrained bots.',
+            seo: 'Core Web Vitals are a direct ranking factor.',
         },
+        llm: {
+            ai: 'Specific formats (lists, definitions) increase likelihood of direct citation.',
+            seo: 'Improves chances of appearing in featured snippets.',
+        },
+        discover: {
+            ai: 'Visuals and feeds help content travel across multimodal AI platforms.',
+            seo: 'Increases visibility in Discover and Image search.',
+        }
     };
 
     return {
         category,
         title,
         description,
-        evidence,
-        whyItMatters: defaultMatters[category],
+        evidence: evidenceStr,
+        whyItMatters: defaultMatters[category] || { ai: 'Important for optimization', seo: 'Good for ranking' },
         impact,
         effort,
         priority: impact / effort,
-        scoreImpact: impact * 2, // Auto-calculated score impact
+        scoreImpact: impact * 2, // simplified
     };
 }

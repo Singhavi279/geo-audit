@@ -48,9 +48,13 @@ export default function Recommendations({ recommendations }: RecommendationsProp
                                     <div className="flex items-center gap-3 mb-2">
                                         <span className={`
                                             text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full
-                                            ${rec.category === 'technical_seo' ? 'bg-blue-50 text-blue-700' :
-                                                rec.category === 'performance' ? 'bg-purple-50 text-purple-700' :
-                                                    'bg-emerald-50 text-emerald-700'}
+                                            ${rec.category === 'content' ? 'bg-emerald-50 text-emerald-700' :
+                                                rec.category === 'trust' ? 'bg-blue-50 text-blue-700' :
+                                                    rec.category === 'crawl' ? 'bg-slate-50 text-slate-700' :
+                                                        rec.category === 'schema' ? 'bg-purple-50 text-purple-700' :
+                                                            rec.category === 'ux' ? 'bg-amber-50 text-amber-700' :
+                                                                rec.category === 'llm' ? 'bg-indigo-50 text-indigo-700' :
+                                                                    'bg-rose-50 text-rose-700'}
                                         `}>
                                             {rec.category.replace(/_/g, ' ')}
                                         </span>
