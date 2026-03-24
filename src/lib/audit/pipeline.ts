@@ -6,7 +6,7 @@ import { analyzeLLM } from './llm';
 import type { AuditInput, AuditResult, Finding } from '../types';
 import { normalizeUrl } from './normalize';
 import { fetchHTML } from './fetch';
-import { extractGates, hasContent } from './gates';
+import { extractGates } from './gates';
 import { checkRobots } from './robots';
 import { analyzeSitemap } from './sitemap';
 import { extractSchema } from './schema';
@@ -17,6 +17,7 @@ import { runAdvancedChecks } from './advanced';
 import { runBrowserChecks } from './browser';
 import { calculateScores } from '../scoring';
 import { generateRecommendations } from './recommendations';
+import * as cheerio from 'cheerio';
 
 /**
  * Run fast audit checks (HTML, SEO, Schema, Gates)
@@ -36,8 +37,11 @@ export async function runFastAudit(input: AuditInput): Promise<AuditResult> {
             checkRobots(normalized),
         ]);
 
+        const $ = cheerio.load(fetchResult.html);
+
         // Step C: Extract gates and on-page evidence
         const { gates: preliminaryGates, onPage: onPageBase } = extractGates(
+            $,
             fetchResult.html,
             fetchResult.headers,
             fetchResult.finalUrl,
@@ -57,12 +61,12 @@ export async function runFastAudit(input: AuditInput): Promise<AuditResult> {
             llm
         ] = await Promise.all([
             analyzeSitemap(input.sitemapUrl || robotsResult.sitemaps[0], fetchResult.finalUrl, input.deep || false),
-            Promise.resolve(runAdvancedChecks(fetchResult)),
-            Promise.resolve(analyzeCitationReadiness(fetchResult.html, onPageBase)),
-            Promise.resolve(extractSchema(fetchResult.html)),
-            Promise.resolve(analyzeContent(fetchResult.html)),
-            Promise.resolve(analyzeTrust(fetchResult.html)),
-            analyzeLLM(fetchResult.html, fetchResult.finalUrl)
+            Promise.resolve(runAdvancedChecks($, fetchResult)),
+            Promise.resolve(analyzeCitationReadiness($, fetchResult.html, onPageBase)),
+            Promise.resolve(extractSchema($)),
+            Promise.resolve(analyzeContent($)),
+            Promise.resolve(analyzeTrust($, fetchResult.html)),
+            analyzeLLM($, fetchResult.finalUrl)
         ]);
 
         // Merge advanced checks into onPage evidence

@@ -33,9 +33,7 @@ interface AdvancedChecks {
     seo: SEOEvidence;
 }
 
-export function runAdvancedChecks(fetchResult: FetchResult): AdvancedChecks {
-    const $ = cheerio.load(fetchResult.html);
-
+export function runAdvancedChecks($: cheerio.CheerioAPI, fetchResult: FetchResult): AdvancedChecks {
     return {
         onPage: {
             favicon: checkFavicon($),

@@ -2,8 +2,7 @@
 import * as cheerio from 'cheerio';
 import type { ContentEvidence } from '../types';
 
-export function analyzeContent(html: string): ContentEvidence {
-    const $ = cheerio.load(html);
+export function analyzeContent($: cheerio.CheerioAPI): ContentEvidence {
     const text = $('body').text();
 
     return {

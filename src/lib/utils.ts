@@ -5,14 +5,15 @@ import * as cheerio from 'cheerio';
 /**
  * Strip HTML tags and get visible text
  */
-export function getVisibleText(html: string): string {
-    const $ = cheerio.load(html);
+export function getVisibleText($: cheerio.CheerioAPI): string {
+    // Clone body to avoid removing elements from the shared DOM
+    const bodyClone = $('body').clone();
 
     // Remove script, style, and other non-visible elements
-    $('script, style, noscript, iframe, object, embed').remove();
+    bodyClone.find('script, style, noscript, iframe, object, embed').remove();
 
     // Get text content
-    const text = $('body').text();
+    const text = bodyClone.text();
 
     // Normalize whitespace
     return text.replace(/\s+/g, ' ').trim();
@@ -21,10 +22,9 @@ export function getVisibleText(html: string): string {
 /**
  * Calculate text-to-HTML ratio
  */
-export function getTextToHtmlRatio(html: string): number {
-    const visibleText = getVisibleText(html);
+export function getTextToHtmlRatio($: cheerio.CheerioAPI, htmlLength: number): number {
+    const visibleText = getVisibleText($);
     const textLength = visibleText.length;
-    const htmlLength = html.length;
 
     if (htmlLength === 0) return 0;
     return textLength / htmlLength;
@@ -75,9 +75,7 @@ export function hasAnswerFirstPattern(text: string, maxChars: number = 600): boo
 /**
  * Extract meta tag content
  */
-export function extractMetaTag(html: string, name: string): string | null {
-    const $ = cheerio.load(html);
-
+export function extractMetaTag($: cheerio.CheerioAPI, name: string): string | null {
     // Try name attribute
     let content = $(`meta[name="${name}"]`).attr('content');
     if (content) return content;
@@ -92,16 +90,14 @@ export function extractMetaTag(html: string, name: string): string | null {
 /**
  * Count elements by selector
  */
-export function countElements(html: string, selector: string): number {
-    const $ = cheerio.load(html);
+export function countElements($: cheerio.CheerioAPI, selector: string): number {
     return $(selector).length;
 }
 
 /**
  * Get all elements text content
  */
-export function getAllElementsText(html: string, selector: string): string[] {
-    const $ = cheerio.load(html);
+export function getAllElementsText($: cheerio.CheerioAPI, selector: string): string[] {
     const results: string[] = [];
 
     $(selector).each((_, el) => {
@@ -117,8 +113,7 @@ export function getAllElementsText(html: string, selector: string): string[] {
 /**
  * Extract structured data (JSON-LD) from HTML
  */
-export function extractJsonLd(html: string): unknown[] {
-    const $ = cheerio.load(html);
+export function extractJsonLd($: cheerio.CheerioAPI): unknown[] {
     const jsonLdBlocks: unknown[] = [];
 
     $('script[type="application/ld+json"]').each((_, el) => {
