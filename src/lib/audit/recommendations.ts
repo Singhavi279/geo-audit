@@ -237,6 +237,16 @@ export function generateRecommendations(
                 effort: 3,
                 priority: 4 / 3,
                 scoreImpact: 10,
+                recommended_action: 'Resolve all JavaScript errors on page load.',
+                implementation_steps: [
+                    'Review the console output for JS errors.',
+                    'Identify the script causing the error.',
+                    'Fix or remove the problematic code.',
+                    'Test the page to ensure errors are resolved.'
+                ],
+                expected_outcome: 'Improves reliability of content rendering for AI crawlers.',
+                confidence_score: 95,
+                estimated_impact_metric: '+10% AI Crawl Success Rate'
             });
         }
 
@@ -254,6 +264,15 @@ export function generateRecommendations(
                 effort: 2,
                 priority: 1,
                 scoreImpact: 5,
+                recommended_action: 'Address non-critical console errors.',
+                implementation_steps: [
+                    'Analyze the warnings and errors in the browser console.',
+                    'Determine if they affect critical rendering paths.',
+                    'Mitigate or fix the underlying issues.'
+                ],
+                expected_outcome: 'Cleaner page execution and potentially faster rendering.',
+                confidence_score: 80,
+                estimated_impact_metric: '+5% AI Crawl Success Rate'
             });
         }
 
@@ -272,6 +291,15 @@ export function generateRecommendations(
                 effort: 4,
                 priority: 0.75,
                 scoreImpact: 5,
+                recommended_action: 'Optimize critical rendering path to reduce load time.',
+                implementation_steps: [
+                    'Minimize main-thread work.',
+                    'Reduce JavaScript execution time.',
+                    'Optimize or defer non-critical resources.'
+                ],
+                expected_outcome: 'Lower chance of crawl timeouts and better UX.',
+                confidence_score: 90,
+                estimated_impact_metric: '+15% Core Web Vitals Score'
             });
         }
     }
@@ -291,6 +319,15 @@ export function generateRecommendations(
             effort: 1,
             priority: 3,
             scoreImpact: 5,
+            recommended_action: 'Add a clear author byline to the page.',
+            implementation_steps: [
+                'Add an author meta tag `<meta name="author" content="Author Name">`.',
+                'Ensure the author name is visibly displayed on the page.',
+                'Consider adding a short author bio or link to an author profile.'
+            ],
+            expected_outcome: 'Increases perceived trustworthiness by AI systems.',
+            confidence_score: 90,
+            estimated_impact_metric: '+12% E-E-A-T Signal Strength'
         });
     }
 
@@ -308,6 +345,14 @@ export function generateRecommendations(
             effort: 1,
             priority: 3,
             scoreImpact: 5,
+            recommended_action: 'Include explicit publish and update dates.',
+            implementation_steps: [
+                'Add visible publish and update dates near the content title.',
+                'Ensure `datePublished` and `dateModified` properties are in the structured data.'
+            ],
+            expected_outcome: 'Helps AI models prioritize the content as recent and relevant.',
+            confidence_score: 95,
+            estimated_impact_metric: '+20% Freshness Score'
         });
     }
 
@@ -367,6 +412,75 @@ function createRecommendation(
         }
     };
 
+    // Dynamic mapping for actionable layers based on category and title heuristics
+    let recommended_action = `Review and improve ${category} optimization.`;
+    let implementation_steps = ['Analyze current setup.', 'Apply best practices.', 'Verify changes.'];
+    let expected_outcome = 'Improved visibility and performance.';
+    let confidence_score = 80;
+    let estimated_impact_metric = '+5% Overall Performance';
+
+    if (category === 'content') {
+        recommended_action = 'Enhance content depth and structure.';
+        implementation_steps = [
+            'Review user intent and ensure content aligns.',
+            'Expand thin sections with specific details.',
+            'Add a clear summary or TL;DR at the beginning.'
+        ];
+        expected_outcome = 'Increased likelihood of AI citing the content as a comprehensive source.';
+        confidence_score = 85;
+        estimated_impact_metric = '+15% AI Citation Likelihood';
+    } else if (category === 'trust') {
+        recommended_action = 'Strengthen E-E-A-T signals.';
+        implementation_steps = [
+            'Ensure author credentials are clear and visible.',
+            'Cite authoritative external sources.',
+            'Make editorial policies accessible.'
+        ];
+        expected_outcome = 'Higher trust scoring from AI evaluation algorithms.';
+        confidence_score = 90;
+        estimated_impact_metric = '+10% Trust Score';
+    } else if (category === 'schema') {
+        recommended_action = 'Implement or fix structured data markup.';
+        implementation_steps = [
+            'Validate current schema using Schema.org tools.',
+            'Add missing entity types (e.g., Article, Organization).',
+            'Fix any syntax or validation errors.'
+        ];
+        expected_outcome = 'Explicit semantic meaning provided to AI models, enhancing entity understanding.';
+        confidence_score = 95;
+        estimated_impact_metric = '+20% Entity Recognition Rate';
+    } else if (category === 'crawl') {
+        recommended_action = 'Ensure page is fully accessible to bots.';
+        implementation_steps = [
+            'Check HTTP status codes and ensure 200 OK.',
+            'Review robots.txt and meta robots tags.',
+            'Verify canonical tags are correctly implemented.'
+        ];
+        expected_outcome = 'Content is successfully ingested by AI crawlers without blockers.';
+        confidence_score = 99;
+        estimated_impact_metric = '+100% Crawlability (if blocked)';
+    } else if (category === 'ux') {
+         recommended_action = 'Optimize page experience and Core Web Vitals.';
+         implementation_steps = [
+             'Run Lighthouse audits and address LCP/CLS issues.',
+             'Ensure the page is fully responsive/mobile-friendly.',
+             'Optimize image and script loading.'
+         ];
+         expected_outcome = 'Lower bounce rates and improved ranking signals due to better user experience.';
+         confidence_score = 85;
+         estimated_impact_metric = '+10% Page Experience Score';
+    } else if (category === 'llm') {
+         recommended_action = 'Format content specifically for LLM extraction.';
+         implementation_steps = [
+             'Add an `/llms.txt` file outlining key content.',
+             'Include short, punchy definitions and quotable statements.',
+             'Use clear lists and structured semantic HTML.'
+         ];
+         expected_outcome = 'Higher frequency of direct citations in LLM-generated answers.';
+         confidence_score = 90;
+         estimated_impact_metric = '+25% LLM Extractability';
+    }
+
     return {
         category,
         title,
@@ -377,5 +491,10 @@ function createRecommendation(
         effort,
         priority: impact / effort,
         scoreImpact: impact * 2, // simplified
+        recommended_action,
+        implementation_steps,
+        expected_outcome,
+        confidence_score,
+        estimated_impact_metric
     };
 }

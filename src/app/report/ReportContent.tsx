@@ -9,6 +9,7 @@ import Recommendations from '@/components/Recommendations';
 import Evidence from '@/components/Evidence';
 import ExportButtons from '@/components/ExportButtons';
 import AuditLoader from '@/components/AuditLoader';
+import ExperimentDashboard from '@/components/ExperimentDashboard';
 import Link from 'next/link';
 
 export default function ReportContent() {
@@ -197,6 +198,11 @@ export default function ReportContent() {
                 {/* Recommendations */}
                 <div className="mb-8">
                     <Recommendations recommendations={result.recommendations} />
+                </div>
+
+                {/* Experiment Dashboard */}
+                <div className="mb-12 mt-12">
+                    <ExperimentDashboard />
                 </div>
 
                 {/* Evidence */}

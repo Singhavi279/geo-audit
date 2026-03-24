@@ -209,6 +209,13 @@ export interface Recommendation {
   effort: number; // 0-5
   priority: number; // impact/effort
   scoreImpact?: number;
+
+  // Actionable Recommendation Layer
+  recommended_action: string;
+  implementation_steps: string[];
+  expected_outcome: string;
+  confidence_score: number; // 0-100
+  estimated_impact_metric: string; // e.g. "+15% AI Citation Likelihood"
 }
 
 export interface SitemapSummary {

@@ -80,7 +80,64 @@ export default function Recommendations({ recommendations }: RecommendationsProp
                                 {rec.description}
                             </p>
 
-                            <div className="bg-surface-container/50 rounded-xl p-4 border border-white/60">
+                            {/* Actionable Insights Toggle */}
+                            <div className="mt-4">
+                                <button
+                                    onClick={() => toggleExpand(index)}
+                                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+                                >
+                                    {expandedIndex === index ? 'Hide Action Plan' : 'View Action Plan'}
+                                    <svg className={`w-4 h-4 transform transition-transform ${expandedIndex === index ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+
+                                {expandedIndex === index && (
+                                    <div className="mt-4 bg-surface-container/50 rounded-xl p-5 border border-blue-100/60 shadow-inner">
+
+                                        <div className="mb-4">
+                                            <h4 className="text-sm font-bold text-text-primary mb-1 text-blue-900 flex items-center gap-2">
+                                                <span>🎯</span> Action
+                                            </h4>
+                                            <p className="text-sm text-text-secondary font-medium">
+                                                {rec.recommended_action}
+                                            </p>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <h4 className="text-sm font-bold text-text-primary mb-2 text-blue-900 flex items-center gap-2">
+                                                <span>📋</span> Implementation Steps
+                                            </h4>
+                                            <ul className="list-disc list-inside text-sm text-text-secondary space-y-1 pl-1">
+                                                {rec.implementation_steps?.map((step, i) => (
+                                                    <li key={i}>{step}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        <div className="grid md:grid-cols-3 gap-4 bg-white/50 p-3 rounded-lg border border-white/80">
+                                            <div>
+                                                <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-1">Expected Outcome</p>
+                                                <p className="text-sm text-text-secondary">{rec.expected_outcome}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-1">Impact Metric</p>
+                                                <p className="text-sm font-semibold text-emerald-600">{rec.estimated_impact_metric}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-1">Confidence</p>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${rec.confidence_score}%` }}></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium text-text-secondary">{rec.confidence_score}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-surface-container/50 rounded-xl p-4 border border-white/60 mt-4">
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-xs font-semibold text-text-primary mb-1">
