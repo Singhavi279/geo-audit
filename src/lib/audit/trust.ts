@@ -2,9 +2,7 @@
 import * as cheerio from 'cheerio';
 import type { TrustEvidence } from '../types';
 
-export function analyzeTrust(html: string): TrustEvidence {
-    const $ = cheerio.load(html);
-    const text = $('body').text();
+export function analyzeTrust($: cheerio.CheerioAPI, html: string): TrustEvidence {
     const htmlLower = html.toLowerCase();
 
     return {

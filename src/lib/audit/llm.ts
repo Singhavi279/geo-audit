@@ -2,9 +2,7 @@
 import * as cheerio from 'cheerio';
 import type { LLMEvidence } from '../types';
 
-export async function analyzeLLM(html: string, baseUrl: string): Promise<LLMEvidence> {
-    const $ = cheerio.load(html);
-
+export async function analyzeLLM($: cheerio.CheerioAPI, baseUrl: string): Promise<LLMEvidence> {
     const llmsTxtPath = new URL('/llms.txt', baseUrl).toString();
     const llmsTxtExists = await checkUrlExists(llmsTxtPath);
 

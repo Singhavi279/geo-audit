@@ -14,29 +14,28 @@ export interface GatesResult {
  * Extract eligibility gates and on-page evidence from HTML
  */
 export function extractGates(
+    $: cheerio.CheerioAPI,
     html: string,
     headers: Record<string, string>,
     finalUrl: string,
     statusCode: number,
     redirectChain: string[]
 ): GatesResult {
-    const $ = cheerio.load(html);
-
     // Extract on-page elements
     const title = $('title').first().text().trim() || null;
-    const metaDescription = extractMetaTag(html, 'description');
+    const metaDescription = extractMetaTag($, 'description');
     const canonical = $('link[rel="canonical"]').attr('href') || null;
 
     // Robots directives
-    const robotsMetaContent = extractMetaTag(html, 'robots') || '';
+    const robotsMetaContent = extractMetaTag($, 'robots') || '';
     const robotsMeta = parseRobotsMeta(robotsMetaContent);
     const robotsHeader = headers['x-robots-tag'] || null;
     const robotsHeaderDirectives = robotsHeader ? parseRobotsMeta(robotsHeader) : [];
 
     // H1 tags
-    const h1 = getAllElementsText(html, 'h1');
-    const h2Count = countElements(html, 'h2');
-    const h3Count = countElements(html, 'h3');
+    const h1 = getAllElementsText($, 'h1');
+    const h2Count = countElements($, 'h2');
+    const h3Count = countElements($, 'h3');
 
     // Open Graph tags
     const og: Record<string, string> = {};
@@ -72,7 +71,7 @@ export function extractGates(
         h2Count,
         h3Count,
         og,
-        hasContent: hasContent(html),
+        hasContent: hasContent($),
         // Advanced checks - will be populated by advanced module
         favicon: undefined,
         viewport: undefined,
@@ -132,13 +131,17 @@ export function extractGates(
 /**
  * Check if content is present and meaningful
  */
-export function hasContent(html: string): boolean {
-    const $ = cheerio.load(html);
+export function hasContent($: cheerio.CheerioAPI): boolean {
+    // Note: To avoid re-parsing or modifying the shared DOM, we can just get all text
+    // from the body, and ideally ignore scripts/styles. Cheerio's .text() already does a decent job,
+    // but to be safe we can use a custom text extractor or just rely on body text being long enough.
+    // However, the original logic removes script, style, noscript.
+    // We can clone just the body element instead of parsing full HTML.
 
-    // Remove non-visible elements
-    $('script, style, noscript').remove();
+    const bodyClone = $('body').clone();
+    bodyClone.find('script, style, noscript').remove();
 
-    const text = $('body').text().trim();
+    const text = bodyClone.text().trim();
 
     // Require at least 100 characters of visible text
     return text.length >= 100;

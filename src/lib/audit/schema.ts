@@ -1,13 +1,14 @@
 // Structured data (JSON-LD) extraction and validation
 
 import type { SchemaEvidence } from '../types';
+import * as cheerio from 'cheerio';
 import { extractJsonLd } from '../utils';
 
 /**
  * Extract and validate structured data from HTML
  */
-export function extractSchema(html: string): SchemaEvidence {
-    const jsonLdBlocks = extractJsonLd(html);
+export function extractSchema($: cheerio.CheerioAPI): SchemaEvidence {
+    const jsonLdBlocks = extractJsonLd($);
     const types: string[] = [];
     const errors: string[] = [];
 

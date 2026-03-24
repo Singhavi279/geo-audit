@@ -1,6 +1,7 @@
 // Citation readiness analysis
 
 import type { CitationEvidence, OnPageEvidence } from '../types';
+import * as cheerio from 'cheerio';
 import {
     getVisibleText,
     getTextToHtmlRatio,
@@ -14,11 +15,12 @@ import {
  * Analyze citation readiness of a page
  */
 export function analyzeCitationReadiness(
+    $: cheerio.CheerioAPI,
     html: string,
     onPage: OnPageEvidence
 ): CitationEvidence {
-    const visibleText = getVisibleText(html);
-    const textToHtmlRatio = getTextToHtmlRatio(html);
+    const visibleText = getVisibleText($);
+    const textToHtmlRatio = getTextToHtmlRatio($, html.length);
 
     // Answer-first detection
     const answerFirst = hasAnswerFirstPattern(visibleText, 600);
@@ -27,8 +29,8 @@ export function analyzeCitationReadiness(
     const h1Count = onPage.h1.length;
     const h2Count = onPage.h2Count;
     const h3Count = onPage.h3Count;
-    const listCount = countElements(html, 'ul, ol');
-    const tableCount = countElements(html, 'table');
+    const listCount = countElements($, 'ul, ol');
+    const tableCount = countElements($, 'table');
 
     // Structure score (0-100)
     let structureScore = 0;
@@ -65,7 +67,7 @@ export function analyzeCitationReadiness(
 
     // Quotable spans
     const shortSentences = countShortSentences(visibleText, 25);
-    const bulletPoints = countElements(html, 'li');
+    const bulletPoints = countElements($, 'li');
     const quotableSpans = shortSentences + bulletPoints;
 
     // Provenance detection
@@ -78,8 +80,7 @@ export function analyzeCitationReadiness(
 
     // Extractability
     const spaMarkers = detectSPAMarkers(html);
-    const scriptCount = countElements(html, 'script');
-    const divCount = countElements(html, 'div');
+    const scriptCount = countElements($, 'script');
     const textLength = visibleText.length;
 
     // Script density (scripts per 1000 chars of text)

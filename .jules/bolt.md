@@ -1,0 +1,3 @@
+## 2025-02-23 - Parse HTML once instead of redundantly
+**Learning:** In a web scraping/auditing application, parsing the same HTML document multiple times using `cheerio.load()` is highly CPU-intensive and creates a massive bottleneck.
+**Action:** Parse the HTML document exactly once at the top level and pass the resulting Cheerio instance (`$`) to all subsequent analysis modules. Be careful with functions that modify the AST (e.g., removing scripts to get visible text) - use `$('body').clone()` to avoid mutating the shared document for other checks. Avoid calling `$.html()` if the original HTML string is already available, as it forces Cheerio to serialize the entire AST back into a string.
