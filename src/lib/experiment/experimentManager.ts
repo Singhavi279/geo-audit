@@ -33,7 +33,7 @@ export function createExperiment(
     impactMetric: string,
     hypothesis: string
 ): Experiment {
-    const id = `exp-${Date.now()}`;
+    const id = `exp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const newExperiment: Experiment = {
         id,
         targetUrl,
